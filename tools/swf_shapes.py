@@ -115,7 +115,7 @@ def chain(segs,T,close=True):
                 if a2==cur:
                     segs.pop(i); add(c2,b2); cur=b2; break
             else: break
-        if close and cur==start: cmd.append('Z')
+        if cur==start: cmd.append('Z')
         parts.append(''.join(cmd))
     return ''.join(parts)
 
@@ -155,8 +155,20 @@ def swf_to_paths(path):
 
 
 def swf_vector_paths(path):
-    """Return [[css_colour, path_d, line_width_or_0], ...] in drawing order."""
-    _, paths = swf_to_paths(path)
+    """Return [[css_colour, path_d, line_width_or_0], ...] in drawing order.
+
+    Two clean-ups are applied to undo artifacts of how the shapes were traced:
+    * a solid fill covering the whole stage (an opaque background box) is dropped;
+    * where a fill is followed by a closed outline stroke, the fill is replaced by the
+      (smoothly curved) outline, rather than the jagged straight-line trace.
+    """
+    stage, paths = swf_to_paths(path)
+    sx0, sx1, sy0, sy1 = [v / 20.0 for v in stage]
+    box = "M%.3f %.3fL%.3f %.3fL%.3f %.3fL%.3f %.3fL%.3f %.3fZ" % (sx1, sy0, sx0, sy0, sx0, sy1, sx1, sy1, sx1, sy0)
+    paths = [p for p in paths if not (p[2] == "fill" and p[1] == box)]
+    for i in range(len(paths) - 1):
+        if paths[i][2] == "fill" and paths[i + 1][2] != "fill" and paths[i + 1][1].endswith("Z"):
+            paths[i] = (paths[i][0], paths[i + 1][1], "fill")
     out = []
     for col, d, kind in paths:
         css = "rgba(%d,%d,%d,%g)" % (col[0], col[1], col[2], round(col[3] / 255, 3))
