@@ -7,7 +7,7 @@ Usage:
 
 Generates (relative to this repo's root):
     assets/sprites/<name>.png   one horizontal strip per sprite (all frames side by side)
-    js/data/sprites.js          sprite metadata + precise-collision masks
+    js/data/sprites.js          sprite metadata, precise-collision masks and vector shapes
     js/data/rooms.js            room sizes, background colours and instances
     js/data/sounds.js           sound effects / instrument samples as base64 WAV
 
@@ -23,6 +23,9 @@ import sys
 import wave
 
 from PIL import Image
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from swf_shapes import swf_vector_paths  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -125,6 +128,10 @@ def convert_sprites(src, used):
                 bits += "0" * (-len(bits) % 4)
                 masks.append("%x" % int("1" + bits, 2))
             info["mask"] = masks
+        # Vector (SWF) sprites: keep the shapes so they can be drawn sharply at any size
+        swfs = glob.glob(os.path.join(src, "sprites", name, "*.swf"))
+        if swfs:
+            info["vector"] = swf_vector_paths(swfs[0])
         meta[name] = info
     return meta
 
