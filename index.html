@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#00f000">
+<meta name="description" content="Frak! - the classic BBC Micro platform game, remade for web browsers.">
+<title>Frak!</title>
+<link rel="icon" type="image/png" href="assets/sprites/sTrogg_sr_Beeb.png">
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #000;
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+  #game {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    display: block;
+    image-rendering: pixelated;
+    outline: none;
+  }
+  #status {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #000;
+    background: #00f000;
+    font: bold 20px/1.4 monospace;
+    padding: 16px;
+    text-align: center;
+  }
+  #status.error { background: #fff; color: #b00; }
+  /* On-screen buttons for touch devices (which have no Backspace key) */
+  #touchbar {
+    position: fixed;
+    top: max(8px, env(safe-area-inset-top));
+    right: max(8px, env(safe-area-inset-right));
+    display: none;
+    gap: 8px;
+  }
+  #touchbar.show { display: flex; }
+  #touchbar button {
+    width: 44px;
+    height: 44px;
+    border: 2px solid #000;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.6);
+    font: bold 20px/1 monospace;
+    color: #000;
+    padding: 0;
+    touch-action: manipulation;
+  }
+</style>
+</head>
+<body>
+<canvas id="game" tabindex="0"></canvas>
+<div id="touchbar">
+  <button id="btn-fullscreen" type="button" aria-label="Full screen">&#x26F6;</button>
+  <button id="btn-back" type="button" aria-label="Back">&#x25C0;</button>
+</div>
+<div id="status">Loading Frak!&hellip;</div>
+<noscript><p style="color:#fff;font-family:monospace;padding:16px">Frak! needs JavaScript to run.</p></noscript>
+
+<!-- Data generated from the GameMaker project by tools/convert_gms.py -->
+<script src="js/data/objects.js"></script>
+<script src="js/data/sprites.js"></script>
+<script src="js/data/rooms.js"></script>
+<script src="js/data/sounds.js"></script>
+
+<!-- Game code -->
+<script src="js/engine.js"></script>
+<script src="js/render.js"></script>
+<script src="js/save.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/world.js"></script>
+<script src="js/trogg.js"></script>
+<script src="js/objects.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
