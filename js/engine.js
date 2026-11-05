@@ -66,6 +66,9 @@ function loadSprites() {
                 return bits;
             });
         }
+        if (d.vector) {
+            s.paths = d.vector.map(([colour, path, width]) => ({ colour, path: new Path2D(path), width }));
+        }
         s.img = new Image();
         promises.push(new Promise((resolve, reject) => {
             s.img.onload = resolve;
@@ -135,7 +138,23 @@ function drawSpriteExt(name, frame, x, y, xscale, yscale) {
     if (f < 0) f += s.n;
     const ctx = Display.ctx;
     ctx.setTransform(xscale, 0, 0, yscale, x, y);
-    ctx.drawImage(s.img, f * s.w, 0, s.w, s.h, -s.xo, -s.yo, s.w, s.h);
+    if (s.paths) {
+        // Vector sprite (imported from SWF in GameMaker): draw the shapes so it stays sharp
+        ctx.translate(-s.xo, -s.yo);
+        for (const p of s.paths) {
+            if (p.width) {
+                ctx.strokeStyle = p.colour;
+                ctx.lineWidth = p.width;
+                ctx.lineCap = ctx.lineJoin = 'round';
+                ctx.stroke(p.path);
+            } else {
+                ctx.fillStyle = p.colour;
+                ctx.fill(p.path);
+            }
+        }
+    } else {
+        ctx.drawImage(s.img, f * s.w, 0, s.w, s.h, -s.xo, -s.yo, s.w, s.h);
+    }
     ctx.setTransform(1, 0, 0, 1, 0, 0);
 }
 

@@ -464,6 +464,7 @@ defineObject('oDemoBubble', {
         switch (self.demoPhase) {
             case 0:
                 centre('Welcome to Frak!', 10);
+                centre('https://tinyurl.com/frakmanual', 10 + 8 * 2);
                 SpriteDrawStretched(self.sprite_index, 0, self.x, self.y, self.bubbleScale, self.bubbleScale);
                 centre('Controls: Z X K O P    BkSp Esc', 256 - 10 - 8 * 3);
                 centre('Shortcut keys: L R U D J Y 0..9', 256 - 10 - 8 * 1);
@@ -482,7 +483,7 @@ defineObject('oDemoBubble', {
                 SpriteDraw('sPoglet_Beeb', 0, 64, 8 * 25);
                 TextDraw(192 - 6 / 2 * 8, 10 + 8 * 22, 'Poglet', c_black);
                 centre('Collect all the keys to win!', 256 - 10 - 8 * 3);
-                centre('https://tinyurl.com/frakmanual', 256 - 10 - 8 * 1);
+                centre('(C) 1984-2026 Nick Pelling', 256 - 10 - 8 * 1);
                 break;
         }
     },
