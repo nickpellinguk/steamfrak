@@ -58,6 +58,44 @@ pip install pillow
 python3 tools/convert_gms.py ../gamemakerstudio-frak
 ```
 
+### Comparing with the GameMaker original
+
+`tools/connections.js` is a static platform-and-ladder connection finder (the same search as the
+original's unused `GraphFind`), run against both versions to see whether the port moves Trogg
+exactly as the original does:
+
+```sh
+node tools/connections.js ../gamemakerstudio-frak            # every level
+node tools/connections.js ../gamemakerstudio-frak room_F_8 --detail
+node tools/connections.js ../gamemakerstudio-frak --trace=room_A_1,572,83,1   # one jump, tick by tick
+```
+
+From every pixel of every platform and every point of every ladder, holding each key Trogg could
+hold, it runs his movement forward until he stands, climbs or dies, and records which platforms
+and ladders he reaches and how quickly. It does this with this port's own code (`js/world.js`
+and the movement functions in `js/trogg.js`, unchanged) and with the original's scripts
+transcribed into the tool, on rooms read from the GameMaker project, then reports every start
+and every connection where the two differ.
+
+The arithmetic is the same (doubles in both), but GameMaker compares reals with an epsilon
+(0.00001 by default): two values that close are equal, for `<` and `>` too. JavaScript compares
+exactly, and Trogg's y moves in steps of 0.05, which isn't exact in binary (`--eps=0` runs the
+original's side with exact comparisons). The differences it finds:
+
+* **Landing a tick early.** When a fall ends exactly on a platform's top, give or take
+  rounding, GameMaker counts it as not yet landed and lands Trogg there on the next tick. This
+  port finds the platform a tick early and lands him short of it, up to about a pixel above it
+  (he then drops onto it). Most of the differences are this, a tick apart, and it also changes
+  which ladders he can grab right at the landing.
+* **Slipping past a platform's corner.** In the original, if that exact hit is at the edge of a
+  platform and Trogg is moving sideways, by the next tick he is past the edge and keeps falling.
+  This port lands him on it. It happens from one or two starts in about one level in seven.
+* **Bounces.** In the original each bounce leaves 0.05 faster than the last (the bounce adds
+  twice gravity), so Trogg bounces higher and higher. Here the early landing takes that back,
+  and after a couple of bounces he bounces at the same height every time. This is the biggest
+  difference: most of the Bouncing levels' differing starts, and some connections that exist
+  only in the original (a bounce that eventually reaches a ladder or platform above).
+
 ### What was left out
 
 * Steam achievements, Google Play services, in-app purchases and ads.
