@@ -81,8 +81,8 @@ The arithmetic is the same (doubles in both), but GameMaker compares reals with 
 (0.00001 by default): two values that close are equal, for `<` and `>` too. JavaScript compares
 exactly, and Trogg's y moves in steps of 0.05, which isn't exact in binary. With the original's
 side comparing exactly (`--eps=0`), the two agree on every start in every level, so every
-difference it finds comes from the epsilon. Across the 55 levels, about 3% of the 550,000 or so
-starts differ, and 18 of about 4,300 connections:
+difference it finds comes from the epsilon. Across the 55 levels, about 3% of the 520,000 or so
+starts differ, and 18 of about 4,100 connections:
 
 * **Landing a tick early.** When a fall ends exactly on a platform's top, give or take
   rounding, GameMaker counts it as not yet landed and lands Trogg there on the next tick. This
