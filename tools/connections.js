@@ -104,27 +104,28 @@ function webEngine(roomName) {
         platforms: () => ({ n: G().platforms_num, x: G().platform_x, y: G().platform_y, w: G().platform_w,
                             moving: G().platform_x.map((_, i) => G().platform_isVertMover[i] || G().platform_isMovable[i]) }),
         ladders: () => ({ n: G().ladder_num, x: G().ladder_x, y: G().ladder_y, h: G().ladder_h }),
-        standing(x, y, xvel, yvel, xm, ym) {
-            const r = ctx.TroggStanding(self, x, y, xvel, yvel, xm, ym);
-            return { x: r.x, y: r.y, xvel: r.xvel, yvel: r.yvel, dofall: r.dofall, doclimb: r.doclimb,
-                     plat: r.platformIndex, ladder: r.ladderIndex };
+        standing(x, y, xm, ym) {
+            const r = ctx.TroggStanding(self, x, y, 0, 0, xm, ym);
+            return { x: r.x, y: r.y, state: { x: r.x, y: r.y, xvel: r.xvel, yvel: r.yvel }, dofall: r.dofall,
+                     doclimb: r.doclimb, plat: r.platformIndex, ladder: r.ladderIndex };
         },
-        falling(x, y, xvel, yvel, xm, ym) {
-            self.yvel = yvel;
-            const r = ctx.TroggFalling(self, x, y, xvel, yvel, xm, ym);
-            return { x: r.x, y: r.y, xvel: r.xvel, yvel: r.yvel, doclimb: r.doclimb, dostand: r.dostand,
-                     dodie: r.dodie, plat: r.platformIndex, ladder: r.ladderIndex };
+        falling(s, xm, ym) {
+            self.yvel = s.yvel;
+            const r = ctx.TroggFalling(self, s.x, s.y, s.xvel, s.yvel, xm, ym);
+            return { x: r.x, y: r.y, state: { x: r.x, y: r.y, xvel: r.xvel, yvel: r.yvel }, doclimb: r.doclimb,
+                     dostand: r.dostand, dodie: r.dodie, plat: r.platformIndex, ladder: r.ladderIndex };
         },
-        climbing(x, y, xvel, yvel, xm, ym) {
+        tooFast: s => (ctx.gLE ? ctx.gLE(s.yvel, -1.60) : s.yvel <= -1.60),
+        climbing(x, y, xm, ym) {
             ctx.lastFind = null;
             ctx.G.platformfind_platformIndex = -1;
-            const r = ctx.TroggClimbing(self, x, y, xvel, yvel, xm, ym);
+            const r = ctx.TroggClimbing(self, x, y, 0, 0, xm, ym);
             // (the ladder it moved Trogg along, as TroggClimbing's own ladderIndex: one it
             // found, and moved by more than 0.001, and he's still on)
             const f = ctx.lastFind;
             const ladder = !r.dofall && f && f.found && Math.abs(y - f.y) > 0.001 ? f.ladderIndex : -1;
-            return { x: r.x, y: r.y, xvel: r.xvel, yvel: r.yvel, dofall: r.dofall, dostand: r.dostand,
-                     plat: ctx.G.platformfind_platformIndex, ladder };
+            return { x: r.x, y: r.y, state: { x: r.x, y: r.y, xvel: r.xvel, yvel: r.yvel }, dofall: r.dofall,
+                     dostand: r.dostand, plat: ctx.G.platformfind_platformIndex, ladder };
         },
     };
 }
@@ -433,8 +434,10 @@ function gmsEngine(roomName) {
         platforms: () => ({ n: g.platforms_num, x: g.platform_x, y: g.platform_y, w: g.platform_w,
                             moving: g.platform_x.map((_, i) => g.platform_isVertMover[i] || g.platform_isMovable[i]) }),
         ladders: () => ({ n: g.ladder_num, x: g.ladder_x, y: g.ladder_y, h: g.ladder_h }),
-        standing: TroggStanding, falling: TroggFalling, climbing: TroggClimbing,
-        le,
+        standing(x, y, xm, ym) { const r = TroggStanding(x, y, 0, 0, xm, ym); r.state = { x: r.x, y: r.y, xvel: r.xvel, yvel: r.yvel }; return r; },
+        falling(s, xm, ym) { const r = TroggFalling(s.x, s.y, s.xvel, s.yvel, xm, ym); r.state = { x: r.x, y: r.y, xvel: r.xvel, yvel: r.yvel }; return r; },
+        climbing(x, y, xm, ym) { const r = TroggClimbing(x, y, 0, 0, xm, ym); r.state = { x: r.x, y: r.y, xvel: r.xvel, yvel: r.yvel }; return r; },
+        tooFast: s => le(s.yvel, -1.60),
     };
 }
 
@@ -468,7 +471,7 @@ function findConnections(E) {
         const grabs = [];
         for (tick = 2; tick < 1000; tick++) {
             for (const ddir of [1, 7]) {        // (holding up or down: grab a ladder)
-                const r = E.falling(s.x, s.y, s.xvel, s.yvel, XM[ddir], YM[ddir]);
+                const r = E.falling(s, XM[ddir], YM[ddir]);
                 if (r.dodie) continue;
                 if (r.doclimb && r.ladder !== srcLadder) {
                     add(src, 'L' + r.ladder, sx, sy, r.x, r.y, sdir, ddir, tick);
@@ -476,15 +479,15 @@ function findConnections(E) {
                 }
                 if (r.dostand && r.plat !== -1 && r.plat !== srcPlat) add(src, 'P' + r.plat, sx, sy, r.x, r.y, sdir, ddir, tick);
             }
-            const r = E.falling(s.x, s.y, s.xvel, s.yvel, 0, 0);
-            s = { x: r.x, y: r.y, xvel: r.xvel, yvel: r.yvel };
+            const r = E.falling(s, 0, 0);
+            s = r.state;
             if (r.dodie) return `dies@${tick} ${fmt(r.x)},${fmt(r.y)} ${grabs.join(' ')}`;
             if (r.doclimb) return `climbs?@${tick}`;
             if (r.dostand && r.plat !== -1) {
                 if (r.plat !== srcPlat) add(src, 'P' + r.plat, sx, sy, r.x, r.y, sdir, NO_KEY, tick);
                 return `lands P${r.plat}@${tick} ${fmt(r.x)},${fmt(r.y)} ${grabs.join(' ')}`;
             }
-            if (E.le ? E.le(s.yvel, -1.60) : s.yvel <= -1.60) return `too fast@${tick} ${fmt(s.x)},${fmt(s.y)} ${grabs.join(' ')}`;
+            if (E.tooFast(s)) return `too fast@${tick} ${fmt(s.x)},${fmt(s.y)} ${grabs.join(' ')}`;
         }
         return 'still falling';
     }
@@ -492,11 +495,11 @@ function findConnections(E) {
         const y = P.y[p];
         for (let x = P.x[p]; x < P.x[p] + P.w[p]; x++) {
             for (const dir of STAND_DIRS) {
-                const r = E.standing(x, y, 0, 0, XM[dir], YM[dir]);
+                const r = E.standing(x, y, XM[dir], YM[dir]);
                 let out;
                 if (r.doclimb) { add('P' + p, 'L' + r.ladder, x, y, r.x, r.y, dir, NO_KEY, 1); out = `climbs L${r.ladder} ${fmt(r.x)},${fmt(r.y)}`; }
                 else if (!r.dofall) { if (r.plat !== p) add('P' + p, 'P' + r.plat, x, y, r.x, r.y, dir, NO_KEY, 1); out = `stands P${r.plat}`; }
-                else out = fall('P' + p, x, y, dir, r, p, -1);
+                else out = fall('P' + p, x, y, dir, r.state, p, -1);
                 outcomes.set(`P${p} ${x},${y} ${dir}`, out);
             }
         }
@@ -505,13 +508,13 @@ function findConnections(E) {
         const x = L.x[l];
         for (let y = L.y[l]; y < L.y[l] + L.h[l]; y++) {
             for (const dir of CLIMB_DIRS) {
-                const r = E.climbing(x, y, 0, 0, XM[dir], YM[dir]);
+                const r = E.climbing(x, y, XM[dir], YM[dir]);
                 let out;
                 if (r.dostand && r.plat !== -1) { add('L' + l, 'P' + r.plat, x, y, r.x, r.y, dir, NO_KEY, 1); out = `stands P${r.plat}`; }
                 else if (!r.dofall) {
                     if (r.ladder !== -1 && r.ladder !== l) add('L' + l, 'L' + r.ladder, x, y, r.x, r.y, dir, NO_KEY, 1);
                     out = `climbing L${r.ladder} ${fmt(r.x)},${fmt(r.y)}`;
-                } else out = fall('L' + l, x, y, dir, r, -1, l);
+                } else out = fall('L' + l, x, y, dir, r.state, -1, l);
                 outcomes.set(`L${l} ${x},${y} ${dir}`, out);
             }
         }
@@ -521,32 +524,9 @@ function findConnections(E) {
 
 // ---------------------------------------------------------------------------------------------
 
-// --trace=room,x,y,dir: both versions' jump or fall from a standing start, tick by tick
-if (opt('trace')) {
-    const [room, x, y, dir] = opt('trace').split(',');
-    for (const E of [gmsEngine(room), webEngine(room)]) {
-        let s = E.standing(+x, +y, 0, 0, XM[+dir], YM[+dir]);
-        console.log(E.name, 'start', JSON.stringify(s));
-        for (let t = 2; t < (+opt('ticks') || 200) && s.dofall !== false; t++) {
-            const r = E.falling(s.x, s.y, s.xvel, s.yvel, 0, 0);
-            console.log(E.name, t, r.x, r.y, r.yvel, r.dostand ? 'stand P' + r.plat : '', r.dodie ? 'die' : '');
-            if (r.dostand || r.dodie) break;
-            s = Object.assign(r, { dofall: true });
-        }
-    }
-    process.exit(0);
-}
-
-const ROOMS = (() => {
-    const ctx = vm.createContext({});
-    vm.runInContext(fs.readFileSync(path.join(ROOT, 'js/data/rooms.js'), 'utf8') + ';this.R = ROOM_DATA;', ctx);
-    return Object.keys(ctx.R).filter(n => /^room_[0A-F]/.test(n));
-})();
-
+// Compare two versions' results for one level: [lines to report, counts]
 const DIRNAME = ['up-left', 'up', 'up-right', 'left', '-', 'right', 'down-left', 'down', 'down-right'];
-let totalOut = 0, totalEdge = 0, totalEnd = 0, totalGrab = 0;
-for (const room of (ONLY.length ? ONLY : ROOMS)) {
-    const w = findConnections(webEngine(room)), g = findConnections(gmsEngine(room));
+function compare(g, w, gname = 'gms', wname = 'web', detail = DETAIL) {
     const lines = [];
     // the levels themselves should match
     const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
@@ -557,6 +537,7 @@ for (const room of (ONLY.length ? ONLY : ROOMS)) {
     // and the ladders he could grab on the way, without the ticks or exact positions
     const end = v => v.split(' ').slice(0, 2).join(' ').replace(/@\d+/, '').replace(/ -?[\d.]+,-?[\d.]+/, '');
     const grabs = v => v.split(' ').filter(t => /^(up|down)@/.test(t)).map(t => t.replace(/@\d+/, '')).sort().join(' ');
+    const pad = Math.max(gname.length, wname.length);
     let nOut = 0, nGrab = 0, nEnd = 0;
     for (const [k, v] of g.outcomes) {
         const wv = w.outcomes.get(k);
@@ -566,9 +547,9 @@ for (const room of (ONLY.length ? ONLY : ROOMS)) {
         if (kind === 'end') nEnd++;
         if (kind === 'grab') nGrab++;
         const [obj, xy, dir] = k.split(' ');
-        if (DETAIL || kind === 'end') lines.push(`  from ${obj} at ${xy} holding ${DIRNAME[dir]} (${kind}):\n      gms: ${v}\n      web: ${wv}`);
+        if (detail || kind === 'end') lines.push(`  from ${obj} at ${xy} holding ${DIRNAME[dir]} (${kind}):\n      ${gname.padEnd(pad)}: ${v}\n      ${wname.padEnd(pad)}: ${wv}`);
     }
-    if (nOut > nEnd && !DETAIL) lines.push(`  (and ${nOut - nEnd} starts that end the same way: ${nGrab} with different ladders to grab on the way, the rest at a different tick or height: --detail)`);
+    if (nOut > nEnd && !detail) lines.push(`  (and ${nOut - nEnd} starts that end the same way: ${nGrab} with different ladders to grab on the way, the rest at a different tick or height: --detail)`);
     let nEdge = 0;
     const keys = new Set([...g.edges.keys(), ...w.edges.keys()]);
     for (const k of [...keys].sort()) {
@@ -576,11 +557,47 @@ for (const room of (ONLY.length ? ONLY : ROOMS)) {
         if (a && b && a.ticks === b.ticks) continue;
         nEdge++;
         const d = e => e ? `${e.ticks} ticks, from ${e.sx},${e.sy} holding ${DIRNAME[e.sdir]}${e.ddir !== NO_KEY ? ' then ' + DIRNAME[e.ddir] : ''}` : 'none';
-        lines.push(`  connection ${k}: gms ${d(a)}; web ${d(b)}`);
+        lines.push(`  connection ${k}: ${gname} ${d(a)}; ${wname} ${d(b)}`);
     }
-    totalOut += nOut; totalEdge += nEdge; totalEnd += nEnd; totalGrab += nGrab;
-    console.log(`${room}: ${g.edges.size} connections (gms), ${w.edges.size} (web), ${g.outcomes.size} starts; ` +
-                (nOut || nEdge ? `${nOut} starts differ (${nEnd} end differently, ${nGrab} grab differently), ${nEdge} connections differ` : 'the same'));
-    for (const l of lines) console.log(l);
+    const summary = `${g.edges.size} connections (${gname}), ${w.edges.size} (${wname}), ${g.outcomes.size} starts; ` +
+        (nOut || nEdge ? `${nOut} starts differ (${nEnd} end differently, ${nGrab} grab differently), ${nEdge} connections differ` : 'the same');
+    return { lines, summary, nOut, nEnd, nGrab, nEdge };
 }
-console.log(`\nIn all: ${totalOut} starts differ (${totalEnd} end differently, ${totalGrab} grab differently) and ${totalEdge} connections differ (GameMaker epsilon ${EPS})`);
+
+function rooms() {
+    const ctx = vm.createContext({});
+    vm.runInContext(fs.readFileSync(path.join(ROOT, 'js/data/rooms.js'), 'utf8') + ';this.R = ROOM_DATA;', ctx);
+    return Object.keys(ctx.R).filter(n => /^room_[0A-F]/.test(n));
+}
+
+// One jump or fall from a standing start, tick by tick, in each engine given
+function trace(engines, x, y, dir, ticks = 200) {
+    for (const E of engines) {
+        let r = E.standing(+x, +y, XM[+dir], YM[+dir]);
+        console.log(E.name, 'start', JSON.stringify(r.state), r.dofall ? 'falls' : r.doclimb ? 'climbs' : 'stands');
+        for (let t = 2; t < ticks && r.dofall !== false; t++) {
+            r = E.falling(r.state, 0, 0);
+            console.log(E.name, t, JSON.stringify(r.state), r.dostand ? 'stand P' + r.plat : '', r.dodie ? 'die' : '');
+            if (r.dostand || r.dodie) break;
+            r.dofall = true;
+        }
+    }
+}
+
+module.exports = { gmsEngine, webEngine, findConnections, compare, rooms, trace, XM, YM, DIRNAME, GMS, EPS };
+
+if (require.main === module) {
+    if (opt('trace')) {
+        const [room, x, y, dir] = opt('trace').split(',');
+        trace([gmsEngine(room), webEngine(room)], x, y, dir, +opt('ticks') || 200);
+        process.exit(0);
+    }
+    let totalOut = 0, totalEdge = 0, totalEnd = 0, totalGrab = 0;
+    for (const room of (ONLY.length ? ONLY : rooms())) {
+        const c = compare(findConnections(gmsEngine(room)), findConnections(webEngine(room)));
+        totalOut += c.nOut; totalEdge += c.nEdge; totalEnd += c.nEnd; totalGrab += c.nGrab;
+        console.log(`${room}: ${c.summary}`);
+        for (const l of c.lines) console.log(l);
+    }
+    console.log(`\nIn all: ${totalOut} starts differ (${totalEnd} end differently, ${totalGrab} grab differently) and ${totalEdge} connections differ (GameMaker epsilon ${EPS})`);
+}
