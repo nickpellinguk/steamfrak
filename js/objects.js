@@ -83,9 +83,9 @@ defineObject('oRoom', {
         inherited(self, 'oRoom', 'step');
         if (G.isdead) return;
 
-        if (G.balloon_time > 0) {
-            if (self.balloon_timer > 0) self.balloon_timer--;
-            if (self.balloon_timer <= 0) {
+        if (gGT(G.balloon_time, 0)) {
+            if (gGT(self.balloon_timer, 0)) self.balloon_timer--;
+            if (gLE(self.balloon_timer, 0)) {
                 const midx = G.trogg_x;
                 const bx = irandom_range(midx - G.balloon_spread / 2, midx + G.balloon_spread / 2);
                 instance_create('oBalloon', Math.floor(bx), G.level_height - 4, BALLOON_DEPTH);
@@ -93,9 +93,9 @@ defineObject('oRoom', {
             }
         }
 
-        if (G.dagger_time > 0) {
-            if (self.dagger_timer > 0) self.dagger_timer--;
-            if (self.dagger_timer <= 0) {
+        if (gGT(G.dagger_time, 0)) {
+            if (gGT(self.dagger_timer, 0)) self.dagger_timer--;
+            if (gLE(self.dagger_timer, 0)) {
                 let midx = G.trogg_x;
                 const h = Math.max(0, G.trogg_y - 4);   // distance to dagger spawn height
                 midx += G.is_vertical_scroll ? h * (0.6 / 0.8) : h * (0.8 / 0.6);
@@ -186,15 +186,15 @@ defineObject('oPlatform', {
         }
 
         if (!G.isdead && self.is_moving) {
-            if (self.pause_countdown > 0) {
+            if (gGT(self.pause_countdown, 0)) {
                 self.pause_countdown--;
             } else {
                 self.x += self.x_vel;
-                if (self.x > self.x_right) { self.x = self.x_right; self.x_vel = -self.x_vel; self.pause_countdown = PLATFORM_PAUSE_TIME; }
-                if (self.x < self.x_left) { self.x = self.x_left; self.x_vel = -self.x_vel; self.pause_countdown = PLATFORM_PAUSE_TIME; }
+                if (gGT(self.x, self.x_right)) { self.x = self.x_right; self.x_vel = -self.x_vel; self.pause_countdown = PLATFORM_PAUSE_TIME; }
+                if (gLT(self.x, self.x_left)) { self.x = self.x_left; self.x_vel = -self.x_vel; self.pause_countdown = PLATFORM_PAUSE_TIME; }
                 self.y += self.y_vel;
-                if (self.y > self.y_down) { self.y = self.y_down; self.y_vel = -self.y_vel; self.pause_countdown = PLATFORM_PAUSE_TIME; }
-                if (self.y < self.y_up) { self.y = self.y_up; self.y_vel = -self.y_vel; self.pause_countdown = PLATFORM_PAUSE_TIME; }
+                if (gGT(self.y, self.y_down)) { self.y = self.y_down; self.y_vel = -self.y_vel; self.pause_countdown = PLATFORM_PAUSE_TIME; }
+                if (gLT(self.y, self.y_up)) { self.y = self.y_up; self.y_vel = -self.y_vel; self.pause_countdown = PLATFORM_PAUSE_TIME; }
                 if (self.platform_index !== -1) {
                     G.platform_x[self.platform_index] = self.x;
                     G.platform_y[self.platform_index] = self.y;
@@ -232,7 +232,7 @@ defineObject('oMeanie', {
         // A yoyo'd meanie flies off sideways
         if (!G.isdead && self.meanie_isdead) {
             self.x += self.meanie_velocity;
-            if (Math.abs(self.x - G.trogg_x) > MAX_DISTANCE_FROM_TROGG) instance_destroy(self);
+            if (gGT(Math.abs(self.x - G.trogg_x), MAX_DISTANCE_FROM_TROGG)) instance_destroy(self);
         }
     },
 });
@@ -244,11 +244,11 @@ defineObject('oBalloon', {
     },
     step(self) {
         if (!G.isdead) {
-            if (self.countdown_timer > 0) {
+            if (gGT(self.countdown_timer, 0)) {
                 self.countdown_timer--;
             } else {
                 self.y -= G.balloon_velocity;
-                if (self.y < 0) instance_destroy(self);
+                if (gLT(self.y, 0)) instance_destroy(self);
             }
         }
         inherited(self, 'oBalloon', 'step');
@@ -271,12 +271,12 @@ defineObject('oDagger', {
     },
     step(self) {
         if (!G.isdead) {
-            if (self.countdown_timer > 0) {
+            if (gGT(self.countdown_timer, 0)) {
                 self.countdown_timer--;
             } else {
                 self.x -= self.dagger_xstep;
                 self.y += self.dagger_ystep;
-                if (self.y >= G.level_height || self.x <= -11) instance_destroy(self);
+                if (gGE(self.y, G.level_height) || gLE(self.x, -11)) instance_destroy(self);
             }
         }
         inherited(self, 'oDagger', 'step');
@@ -310,8 +310,8 @@ defineObject('oScrubbly', {
             }
             if (!self.meanie_isdead) {
                 self.x += self.meanie_velocity;
-                if (self.x < self.minx) { self.x = self.minx; self.meanie_velocity = self.default_x_velocity; }
-                if (self.x > self.maxx) { self.x = self.maxx; self.meanie_velocity = -self.default_x_velocity; }
+                if (gLT(self.x, self.minx)) { self.x = self.minx; self.meanie_velocity = self.default_x_velocity; }
+                if (gGT(self.x, self.maxx)) { self.x = self.maxx; self.meanie_velocity = -self.default_x_velocity; }
                 if (self.platform_index !== -1 && self.follow_platform_y) {
                     self.y = G.platform_y[self.platform_index];
                 }
@@ -333,7 +333,7 @@ defineObject('oPoglet', {
                 self.inited = true;
                 self.meanie_velocity = 0;
                 if (G.moving_enabled) {
-                    if (self.yoff_min !== 0 || self.yoff_max !== 0) {
+                    if (gNE(self.yoff_min, 0) || gNE(self.yoff_max, 0)) {
                         self.miny = self.y + self.yoff_min;
                         self.maxy = self.y + self.yoff_max;
                         self.meanie_velocity = self.default_y_velocity;
@@ -351,10 +351,10 @@ defineObject('oPoglet', {
                     if (self.initially_go_down) self.meanie_velocity = -self.default_y_velocity;
                 }
             }
-            if (!self.meanie_isdead && self.meanie_velocity !== 0) {
+            if (!self.meanie_isdead && gNE(self.meanie_velocity, 0)) {
                 self.y += self.meanie_velocity;
-                if (self.y < self.miny) { self.y = self.miny; self.meanie_velocity = self.default_y_velocity; }
-                if (self.y > self.maxy) { self.y = self.maxy; self.meanie_velocity = -self.default_y_velocity; }
+                if (gLT(self.y, self.miny)) { self.y = self.miny; self.meanie_velocity = self.default_y_velocity; }
+                if (gGT(self.y, self.maxy)) { self.y = self.maxy; self.meanie_velocity = -self.default_y_velocity; }
             }
         }
         inherited(self, 'oPoglet', 'step');
@@ -368,13 +368,13 @@ defineObject('oHooter', {
         inherited(self, 'oHooter', 'create');
     },
     step(self) {
-        if (self.initial_sleep_ticks > 0) {
+        if (gGT(self.initial_sleep_ticks, 0)) {
             self.initial_sleep_ticks--;
         } else if (!G.isdead && G.moving_enabled && !self.meanie_isdead) {
             // Bounce up and down
             self.meanie_velocity -= G.frak_gravity;
             self.y -= self.meanie_velocity;
-            if (self.y > self.basey) {
+            if (gGT(self.y, self.basey)) {
                 self.y = self.basey;
                 self.meanie_velocity = self.initial_jump_velocity;
             }
@@ -390,25 +390,25 @@ const TRAINING_ARROW_DISTANCE = 50;
 defineObject('oTrainingArrow', {
     draw(self) {
         const dx = self.x - G.trogg_x, dy = self.y - G.trogg_y;
-        if (dx * dx + dy * dy <= TRAINING_ARROW_DISTANCE * TRAINING_ARROW_DISTANCE) {
+        if (gLE(dx * dx + dy * dy, TRAINING_ARROW_DISTANCE * TRAINING_ARROW_DISTANCE)) {
             inherited(self, 'oTrainingArrow', 'draw');
         }
     },
 });
 defineObject('oTrainingDown', {
-    draw(self) { if (G.trogg_y < self.y + 10) inherited(self, 'oTrainingDown', 'draw'); },
+    draw(self) { if (gLT(G.trogg_y, self.y + 10)) inherited(self, 'oTrainingDown', 'draw'); },
 });
 defineObject('oTrainingUp', {
-    draw(self) { if (G.trogg_y > self.y - 10) inherited(self, 'oTrainingUp', 'draw'); },
+    draw(self) { if (gGT(G.trogg_y, self.y - 10)) inherited(self, 'oTrainingUp', 'draw'); },
 });
 defineObject('oTrainingLeft', {
-    draw(self) { if (G.trogg_x > self.x - 10) inherited(self, 'oTrainingLeft', 'draw'); },
+    draw(self) { if (gGT(G.trogg_x, self.x - 10)) inherited(self, 'oTrainingLeft', 'draw'); },
 });
 defineObject('oTrainingRight', {
-    draw(self) { if (G.trogg_x < self.x + 10) inherited(self, 'oTrainingRight', 'draw'); },
+    draw(self) { if (gLT(G.trogg_x, self.x + 10)) inherited(self, 'oTrainingRight', 'draw'); },
 });
 defineObject('oTrainingJumpRight', {
-    draw(self) { if (G.trogg_x < self.x + 10) inherited(self, 'oTrainingJumpRight', 'draw'); },
+    draw(self) { if (gLT(G.trogg_x, self.x + 10)) inherited(self, 'oTrainingJumpRight', 'draw'); },
 });
 defineObject('oTrainingYoyoRight', {
     create(self) {
@@ -543,16 +543,16 @@ defineObject('oButtonRoom', {
             const ang = pointDirection(h, v);
             const half = 60.0;
             let last = G.gp_last_lr_moving;
-            G.gp_last_lr_moving = (spd >= 0.6);
+            G.gp_last_lr_moving = gGE(spd, 0.6);
             if (G.gp_last_lr_moving && !last) {
-                if (ang >= 180 - half && ang <= 180 + half) performKeyPress(self, vk_left);
-                if (ang <= half || ang >= 360 - half) performKeyPress(self, vk_right);
+                if (gGE(ang, 180 - half) && gLE(ang, 180 + half)) performKeyPress(self, vk_left);
+                if (gLE(ang, half) || gGE(ang, 360 - half)) performKeyPress(self, vk_right);
             }
             last = G.gp_last_ud_moving;
-            G.gp_last_ud_moving = (spd >= 0.6);
+            G.gp_last_ud_moving = gGE(spd, 0.6);
             if (G.gp_last_ud_moving && !last) {
-                if (ang >= 90 - half && ang <= 90 + half) performKeyPress(self, vk_up);
-                if (ang >= 270 - half && ang <= 270 + half) performKeyPress(self, vk_down);
+                if (gGE(ang, 90 - half) && gLE(ang, 90 + half)) performKeyPress(self, vk_up);
+                if (gGE(ang, 270 - half) && gLE(ang, 270 + half)) performKeyPress(self, vk_down);
             }
             if (gamepad_button_check_pressed(gp_padl) || gamepad_button_check_pressed(gp_shoulderl)) performKeyPress(self, vk_left);
             if (gamepad_button_check_pressed(gp_padr) || gamepad_button_check_pressed(gp_shoulderr)) performKeyPress(self, vk_right);
@@ -600,7 +600,7 @@ defineObject('oButtonRoom', {
         79(self) { performKeyPress(self, vk_up); },
         85(self) { performKeyPress(self, vk_up); },
         75(self) { performKeyPress(self, vk_down); },
-        68(self) { performKeyPress(self, vk_down); },
+        68(self) { performKeyPress(self, vk_up); },        // (D: up, as in the original's menus)
         80(self) { performKeyPress(self, vk_space); },
         89(self) { performKeyPress(self, vk_space); },
     },
@@ -701,7 +701,7 @@ defineObject('oHooterRoom', {
         inherited(self, 'oHooterRoom', 'step');
         self.hooter_ypos += self.hooter_yvel;
         self.hooter_yvel -= 0.05;
-        if (self.hooter_ypos < 0) {
+        if (gLT(self.hooter_ypos, 0)) {
             self.hooter_ypos = 0;
             self.hooter_yvel = 1.5;
         }
@@ -1092,9 +1092,7 @@ defineObject('oSettingsMusic', {
     keyPress: {
         [vk_space](self) {
             if (self.selectionIndex === G.selectedItem) {
-                G.MusicOption = (G.MusicOption + 1) % NUM_MUSIC_OPTIONS;
-                // (Web version: apply the change straight away rather than on the next tune)
-                PlayMusic(G.music_currentIndex || MUSIC_LEVELSCREEN);
+                G.MusicOption = (G.MusicOption + 1) % NUM_MUSIC_OPTIONS;     // (heard from the next tune)
             }
         },
     },

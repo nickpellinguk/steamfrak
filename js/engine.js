@@ -28,6 +28,23 @@ function gmlRound(v) {
     const r = Math.round(v);
     return (Math.abs(v % 1) === 0.5 && (r % 2) !== 0) ? r - 1 : r;
 }
+// GameMaker compares two reals as equal when they're closer than its epsilon (math_set_epsilon,
+// 0.00001 by default), and that goes for <, <=, > and >= as well as == and != (a - b within the
+// epsilon compares as 0). JavaScript compares exactly. Trogg's y moves in steps of 0.05, which
+// isn't exact in binary, so this decides, for example, whether a fall lands on a platform this
+// tick or the next. Comparisons of reals in the game logic use these, so it moves exactly as the
+// original does (tools/connections.js checks that against the GML).
+const GML_EPSILON = 0.00001;
+function gmlCmp(a, b) {
+    const d = a - b;
+    return (d === 0 || Math.abs(d) < GML_EPSILON) ? 0 : (d < 0 ? -1 : 1);
+}
+function gEQ(a, b) { return gmlCmp(a, b) === 0; }
+function gNE(a, b) { return gmlCmp(a, b) !== 0; }
+function gLT(a, b) { return gmlCmp(a, b) < 0; }
+function gLE(a, b) { return gmlCmp(a, b) <= 0; }
+function gGT(a, b) { return gmlCmp(a, b) > 0; }
+function gGE(a, b) { return gmlCmp(a, b) >= 0; }
 function irandom_range(a, b) {
     a = Math.floor(a); b = Math.floor(b);
     return a + Math.floor(Math.random() * (b - a + 1));

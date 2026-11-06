@@ -60,9 +60,10 @@ python3 tools/convert_gms.py ../gamemakerstudio-frak
 
 ### Comparing with the GameMaker original
 
-`tools/connections.js` is a static platform-and-ladder connection finder (the same search as the
-original's unused `GraphFind`), run against both versions to see whether the port moves Trogg
-exactly as the original does:
+This port is meant as a reference version of the original, warts and all: it should move Trogg
+exactly as the GameMaker game does. `tools/connections.js` checks that. It is a static
+platform-and-ladder connection finder (the same search as the original's unused `GraphFind`),
+run against both versions:
 
 ```sh
 node tools/connections.js ../gamemakerstudio-frak            # every level
@@ -75,28 +76,29 @@ hold, it runs his movement forward until he stands, climbs or dies, and records 
 and ladders he reaches and how quickly. It does this with this port's own code (`js/world.js`
 and the movement functions in `js/trogg.js`, unchanged) and with the original's scripts
 transcribed into the tool, on rooms read from the GameMaker project, then reports every start
-and every connection where the two differ.
+and every connection where the two differ. Over the 55 levels that's about 520,000 starts and
+4,100 connections, and they're all the same.
 
-The arithmetic is the same (doubles in both), but GameMaker compares reals with an epsilon
-(0.00001 by default): two values that close are equal, for `<` and `>` too. JavaScript compares
-exactly, and Trogg's y moves in steps of 0.05, which isn't exact in binary. With the original's
-side comparing exactly (`--eps=0`), the two agree on every start in every level, so every
-difference it finds comes from the epsilon. Across the 55 levels, about 3% of the 520,000 or so
-starts differ, and 18 of about 4,100 connections:
+They weren't at first. The arithmetic is the same (doubles in both), but GameMaker compares
+reals with an epsilon (0.00001 by default): two values that close are equal, and that goes for
+`<` and `>` too. JavaScript compares exactly, and Trogg's y moves in steps of 0.05, which isn't
+exact in binary. So when a fall ended exactly on a platform's top, give or take rounding,
+GameMaker landed Trogg there on the next tick, and this port found the platform a tick early and
+landed him short of it (up to about a pixel above, dropping onto it after). About 3% of the
+starts differed, and 18 connections. It mostly meant landing a tick early, and in the
+original:
 
-* **Landing a tick early.** When a fall ends exactly on a platform's top, give or take
-  rounding, GameMaker counts it as not yet landed and lands Trogg there on the next tick. This
-  port finds the platform a tick early and lands him short of it, up to about a pixel above it
-  (he then drops onto it). Most of the differences are this, a tick apart, and it also changes
-  which ladders he can grab right at the landing.
-* **Slipping past a platform's corner.** In the original, if that exact hit is at the edge of a
-  platform and Trogg is moving sideways, by the next tick he is past the edge and keeps falling.
-  This port lands him on it. It happens from one or two starts in about one level in seven.
-* **Bounces.** In the original each bounce leaves 0.05 faster than the last (the bounce adds
-  twice gravity), so Trogg bounces higher and higher. Here the early landing takes that back,
-  and after a couple of bounces he bounces at the same height every time. This is the biggest
-  difference: most of the Bouncing levels' differing starts, and some connections that exist
-  only in the original (a bounce that eventually reaches a ladder or platform above).
+* Trogg could grab a ladder in that extra tick as he landed.
+* If that exact hit was at a platform's edge and he was moving sideways, by the next tick he was
+  past the edge and fell on (one or two starts in about one level in seven).
+* Each bounce left 0.05 faster than the last (the bounce adds twice gravity), so Trogg bounced
+  higher and higher; here the early landing took that back, and he settled at one height.
+
+Now the game logic compares reals the way GameMaker does (`gmlCmp` and `gEQ`, `gLT` etc. in
+`js/engine.js`, used in `js/world.js`, `js/trogg.js` and `js/objects.js` wherever a value can be
+fractional: Trogg, the yoyo, moving platforms, meanies, balloons and daggers, the training
+arrows, gamepad and mouse directions). `--eps=0` runs the original's side with exact
+comparisons instead, which reproduces the old differences.
 
 ### What was left out
 
@@ -108,12 +110,15 @@ starts differ, and 18 of about 4,100 connections:
 
 ### Small differences from the PC version
 
+These are about the display and the browser; the game itself behaves as the original (see above).
+
 * **Graphics → Blocky** draws crisp, unfiltered pixels and **Smooth** uses bilinear filtering.
   (The PC version switched on texture filtering whenever the window was taller than 256 pixels.)
-* Changing the **Music** setting takes effect immediately rather than at the next tune.
-* In the menus, **D** moves down (the GML mapped it to up, unlike in the game itself).
 * Touch screens get on-screen Back and Full-screen buttons, since phones have no Backspace key.
 * Music pauses while the browser tab is hidden.
+* Two lines of the original's music (`wbass[5]` and `wbass[6]` in `SetupMusic`) have a stray
+  `+` between two strings (`"..." + + "..."`). This reads them as joined, which is what they
+  look meant to be; what GameMaker makes of a `+` in front of a string hasn't been checked.
 
 ## Notes for an 8-bit or Amiga version
 

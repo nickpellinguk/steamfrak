@@ -49,7 +49,7 @@ function PlatformFixup() {
     for (let yco = 0; yco < MAX_HEIGHT; yco++) {
         G.platform_group_base[yco] = G.platform_group_index;
         for (let i = 0; i < G.platforms_num; i++) {
-            if (G.platform_y[i] === yco || G.platform_isVertMover[i] || G.platform_isMovable[i]) {
+            if (gEQ(G.platform_y[i], yco) || G.platform_isVertMover[i] || G.platform_isMovable[i]) {
                 G.platform_group_array[G.platform_group_index++] = i;
             }
         }
@@ -64,17 +64,17 @@ function PlatformFind(x, y1, y2) {
     let platformIndex = -1;
 
     // Only do platform detection if Trogg is falling downwards
-    if (y1 < y2 && G.platform_group_base) {
+    if (gLT(y1, y2) && G.platform_group_base) {
         const ceily1 = Math.ceil(y1);
         // Only check if Trogg hasn't fallen off the bottom of the world
         if (ceily1 < MAX_HEIGHT) {
-            for (let yco = Math.max(0, ceily1); yco < y2 && yco < MAX_HEIGHT; yco++) {
+            for (let yco = Math.max(0, ceily1); gLT(yco, y2) && yco < MAX_HEIGHT; yco++) {
                 const first = G.platform_group_base[yco];
                 const last = G.platform_group_base[yco + 1];
                 for (let g = first; g < last; g++) {
                     const i = G.platform_group_array[g];
                     const px = G.platform_x[i];
-                    if (x >= px && x < px + G.platform_w[i] && yco === G.platform_y[i]) {
+                    if (gGE(x, px) && gLT(x, px + G.platform_w[i]) && gEQ(yco, G.platform_y[i])) {
                         platformIndex = i;
                         result = yco;
                         break;
@@ -98,7 +98,7 @@ function PlatformFindMovable(x, y) {
         const i = G.platform_group_array[g];
         if (!G.platform_isMovable[i]) continue;
         const px = G.platform_x[i], py = G.platform_y[i];
-        if (x >= px && x < px + G.platform_w[i] && y >= py && y < py + G.platform_h[i]) {
+        if (gGE(x, px) && gLT(x, px + G.platform_w[i]) && gGE(y, py) && gLT(y, py + G.platform_h[i])) {
             return i;
         }
     }
@@ -150,7 +150,7 @@ function LadderFixup() {
         G.ladder_group_base[xco] = index;
         for (let i = 0; i < G.ladder_num; i++) {
             const lx = G.ladder_x[i];
-            if (xco >= lx - 6 && xco <= lx + 6) G.ladder_group_array[index++] = i;
+            if (gGE(xco, lx - 6) && gLE(xco, lx + 6)) G.ladder_group_array[index++] = i;
         }
     }
     G.ladder_group_base[MAX_WIDTH] = index;
@@ -161,10 +161,10 @@ function LadderFind(x, y1, y2, isOnPlatform, isJumping) {
     let found = false;
     let rx = x, ry = y1;
     let ladderIndex = -1;
-    const goingUp = (y2 < y1);
+    const goingUp = gLT(y2, y1);
     const xi = Math.trunc(x);
 
-    if (y1 !== y2 && xi >= 0 && xi < MAX_WIDTH && G.ladder_group_base) {
+    if (gNE(y1, y2) && xi >= 0 && xi < MAX_WIDTH && G.ladder_group_base) {
         const first = G.ladder_group_base[xi];
         const last = G.ladder_group_base[xi + 1];
         for (let g = first; g < last; g++) {
@@ -179,24 +179,24 @@ function LadderFind(x, y1, y2, isOnPlatform, isJumping) {
                     lady += G.ladder_extrah[i];
                     ladh -= G.ladder_extrah[i];
                 }
-                if (isOnPlatform && lady > y1) continue;
-                if (ry >= lady && y2 < lady + ladh) {
+                if (isOnPlatform && gGT(lady, y1)) continue;
+                if (gGE(ry, lady) && gLT(y2, lady + ladh)) {
                     // Overlap found, so go up no further than the top of this ladder
                     found = true;
                     rx = x + sign(ladx - x);
                     ry = Math.max(y2, lady);
                     ladderIndex = i;
-                    if (ry === y2) break;
+                    if (gEQ(ry, y2)) break;
                 }
             } else {
-                if (isOnPlatform && lady < y1) continue;
-                if (ry < lady + ladh - 1 && y2 >= lady) {
+                if (isOnPlatform && gLT(lady, y1)) continue;
+                if (gLT(ry, lady + ladh - 1) && gGE(y2, lady)) {
                     // Overlap found, so go down no further than the bottom of this ladder
                     found = true;
                     rx = x + sign(ladx - x);
                     ry = Math.min(y2, lady + ladh - 1);
                     ladderIndex = i;
-                    if (ry === y2) break;
+                    if (gEQ(ry, y2)) break;
                 }
             }
         }

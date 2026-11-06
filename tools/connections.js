@@ -69,7 +69,10 @@ function webEngine(roomName) {
     }
     vm.runInContext(`
         var G = {}, Runtime = { instances: [] }, SPR = SPRITE_DATA;
+        ${(fs.readFileSync(path.join(ROOT, 'js/engine.js'), 'utf8').match(/^const GML_EPSILON = .*$/m) || [''])[0]}
         ${webSource('js/engine.js', ['sign', 'gmlRound', 'objectParent', 'sprite_width', 'sprite_height'])}
+        ${/function gmlCmp/.test(fs.readFileSync(path.join(ROOT, 'js/engine.js'), 'utf8'))
+            ? webSource('js/engine.js', ['gmlCmp', 'gEQ', 'gNE', 'gLT', 'gLE', 'gGT', 'gGE']) : ''}
         ${fs.readFileSync(path.join(ROOT, 'js/world.js'), 'utf8')}
         ${webSource('js/trogg.js', ['TroggStanding', 'TroggFalling', 'TroggClimbing'])}
         // (the LadderFind result each movement function last used, for the connection finder)

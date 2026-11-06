@@ -32,7 +32,7 @@ function TroggStanding(self, xco, yco, xvel, yvel, xmove, ymove) {
 
     xco += xmove;
     const nexty = PlatformFind(xco, yco, yco + 1);
-    if (nexty !== yco) {
+    if (gNE(nexty, yco)) {
         dofall = true;
     } else {
         platformIndex = G.platformfind_platformIndex;
@@ -67,10 +67,10 @@ function TroggFalling(self, xco, yco, xvel, yvel, xmove, ymove) {
 
     xco = Math.max(12, xco + xvel);
     xco = Math.min(G.level_width - 10, xco);
-    if (yvel > -4) {            // Terminal velocity!!
+    if (gGT(yvel, -4)) {        // Terminal velocity!!
         yvel -= G.frak_gravity; // Gravity!!
     }
-    if (ymove !== 0 && yvel >= -1.25 - 0.025) {
+    if (ymove !== 0 && gGE(yvel, -1.25 - 0.025)) {
         const lf = LadderFind(xco, yco, yco - yvel, false, true);
         if (lf.found) {
             doclimb = true;
@@ -83,11 +83,11 @@ function TroggFalling(self, xco, yco, xvel, yvel, xmove, ymove) {
         }
     }
     if (!doclimb) {
-        if (yvel >= 0) {
+        if (gGE(yvel, 0)) {
             yco -= yvel;
         } else {
             const nexty = PlatformFind(xco, yco, yco - yvel);
-            if (nexty === yco - yvel) {
+            if (gEQ(nexty, yco - yvel)) {
                 yco = nexty;
             } else {
                 platformIndex = G.platformfind_platformIndex;
@@ -96,7 +96,7 @@ function TroggFalling(self, xco, yco, xvel, yvel, xmove, ymove) {
                     yco = nexty;
                     yvel = -self.yvel + G.frak_gravity * 2;
                 } else {
-                    if (yvel <= -1.60) {
+                    if (gLE(yvel, -1.60)) {
                         dodie = true;   // Trogg dies if he lands on a platform too fast!
                     }
                     dostand = true;
@@ -107,7 +107,7 @@ function TroggFalling(self, xco, yco, xvel, yvel, xmove, ymove) {
             }
         }
     }
-    if (yco >= G.level_height) {
+    if (gGE(yco, G.level_height)) {
         xvel = 0;
         yco = G.level_height - 1;
         dodie = true;
@@ -128,11 +128,11 @@ function TroggClimbing(self, xco, yco, xvel, yvel, xmove, ymove) {
 
     if (ymove > 0) {
         const lf = LadderFind(xco, yco, yco - ymove, false, false);
-        if (lf.found && Math.abs(yco - lf.y) > 0.001) {
+        if (lf.found && gGT(Math.abs(yco - lf.y), 0.001)) {
             xco = lf.x;
             yco = lf.y;
             ladderIndex = lf.ladderIndex;
-            if (xmove !== 0 && yco >= G.ladder_y[ladderIndex] + G.ladder_extrah[ladderIndex]) {
+            if (xmove !== 0 && gGE(yco, G.ladder_y[ladderIndex] + G.ladder_extrah[ladderIndex])) {
                 xvel = xmove;
                 dofall = true;
                 ladderIndex = -1;
@@ -154,10 +154,10 @@ function TroggClimbing(self, xco, yco, xvel, yvel, xmove, ymove) {
 
     if (ymove === 0) {
         const lf = LadderFind(xco, yco, yco + 2, false, false);
-        if (lf.found && Math.abs(yco - lf.y) > 0.001) {
+        if (lf.found && gGT(Math.abs(yco - lf.y), 0.001)) {
             xco = lf.x;
             ladderIndex = lf.ladderIndex;
-            if (xmove !== 0 && yco >= G.ladder_y[ladderIndex] + G.ladder_extrah[ladderIndex]) {
+            if (xmove !== 0 && gGE(yco, G.ladder_y[ladderIndex] + G.ladder_extrah[ladderIndex])) {
                 xvel = xmove;
                 dofall = true;
                 ladderIndex = -1;
@@ -177,11 +177,11 @@ function TroggClimbing(self, xco, yco, xvel, yvel, xmove, ymove) {
             douddebounce = true;
         } else {
             const lf = LadderFind(xco, yco, yco - ymove, false, false);
-            if (lf.found && Math.abs(yco - lf.y) > 0.001) {
+            if (lf.found && gGT(Math.abs(yco - lf.y), 0.001)) {
                 xco = lf.x;
                 yco = lf.y;
                 ladderIndex = lf.ladderIndex;
-                if (xmove !== 0 && yco >= G.ladder_y[ladderIndex] + G.ladder_extrah[ladderIndex]) {
+                if (xmove !== 0 && gGE(yco, G.ladder_y[ladderIndex] + G.ladder_extrah[ladderIndex])) {
                     xvel = xmove;
                     dofall = true;
                     ladderIndex = -1;
@@ -515,21 +515,21 @@ function troggMouseAndGamepad(self) {
         } else {
             const xdiff = mx - self.last_gui_x;
             const ydiff = my - self.last_gui_y;
-            if (xdiff !== 0 || ydiff !== 0) self.mightbeYoyo = false;
+            if (gNE(xdiff, 0) || gNE(ydiff, 0)) self.mightbeYoyo = false;
             if (++self.ticksWhileDragging >= 15 && self.mightbeYoyo) {
                 G.forceyoyodown = true;
                 self.mightbeYoyo = false;
             }
-            if (!G.forceyoyodown && (xdiff !== 0 || ydiff !== 0)) {
+            if (!G.forceyoyodown && (gNE(xdiff, 0) || gNE(ydiff, 0))) {
                 const ax = Math.abs(xdiff), ay = Math.abs(ydiff);
                 let seg;
-                if (ax >= ay) {
-                    seg = (ax * 577350 < ay * 1000000) ? 1 : 0;     // tan(30)
+                if (gGE(ax, ay)) {
+                    seg = gLT(ax * 577350, ay * 1000000) ? 1 : 0;     // tan(30)
                 } else {
-                    seg = (ay * 363970 < ax * 1000000) ? 1 : 2;     // tan(20)
+                    seg = gLT(ay * 363970, ax * 1000000) ? 1 : 2;     // tan(20)
                 }
-                if (xdiff < 0) seg = 4 - seg;
-                if (ydiff < 0) seg = (8 - seg) & 7;
+                if (gLT(xdiff, 0)) seg = 4 - seg;
+                if (gLT(ydiff, 0)) seg = (8 - seg) & 7;
                 self.leftkey = (seg >= 3 && seg <= 5);
                 self.rightkey = (seg === 0 || seg === 1 || seg === 7);
                 self.upkey = (seg >= 5 && seg <= 7);
@@ -568,12 +568,12 @@ function troggMouseAndGamepad(self) {
         }
 
         let last = gp.lr_moving;
-        gp.lr_moving = (spd >= lrsens);
+        gp.lr_moving = gGE(spd, lrsens);
         if (!gp.lr_moving && last) { self.leftkey = false; self.rightkey = false; }
         if (gp.lr_moving && !last) { gp.axis_left = false; gp.axis_right = false; }
 
         last = gp.ud_moving;
-        gp.ud_moving = (spd >= udsens);
+        gp.ud_moving = gGE(spd, udsens);
         if (!gp.ud_moving && last) { self.upkey = false; self.downkey = false; }
         if (gp.ud_moving && !last) { gp.axis_up = false; gp.axis_down = false; }
 
@@ -585,12 +585,12 @@ function troggMouseAndGamepad(self) {
             if (!now && was) self[field] = false;
         };
         if (gp.ud_moving) {
-            edge('axis_up', ang >= 90 - udhalf && ang <= 90 + udhalf, 'upkey');
-            edge('axis_down', ang >= 270 - udhalf && ang <= 270 + udhalf, 'downkey');
+            edge('axis_up', gGE(ang, 90 - udhalf) && gLE(ang, 90 + udhalf), 'upkey');
+            edge('axis_down', gGE(ang, 270 - udhalf) && gLE(ang, 270 + udhalf), 'downkey');
         }
         if (gp.lr_moving) {
-            edge('axis_left', ang >= 180 - lrhalf && ang <= 180 + lrhalf, 'leftkey');
-            edge('axis_right', ang <= lrhalf || ang >= 360 - lrhalf, 'rightkey');
+            edge('axis_left', gGE(ang, 180 - lrhalf) && gLE(ang, 180 + lrhalf), 'leftkey');
+            edge('axis_right', gLE(ang, lrhalf) || gGE(ang, 360 - lrhalf), 'rightkey');
         }
         edge('yoyo', gamepad_button_check(gp_face1), 'yoyokey');
         edge('left', gamepad_button_check(gp_padl), 'leftkey');
@@ -976,7 +976,7 @@ function troggMove(self, xmove, ymove, doyoyo, flags) {
             self.current_platform_index = r.platformIndex;
 
             let dochangestate = false;
-            if (doyoyo && self.yoyolength < 80) {
+            if (doyoyo && gLT(self.yoyolength, 80)) {
                 self.yoyolength += 1.3;
             } else {
                 dochangestate = true;
@@ -991,7 +991,7 @@ function troggMove(self, xmove, ymove, doyoyo, flags) {
                 PlatformMoveTo(self.trogg_carryingPlatform, self.yoyox - 3 * dir, self.yoyoy - 3, dir);
             }
 
-            if (dochangestate || collided || self.yoyox < 2) {
+            if (dochangestate || collided || gLT(self.yoyox, 2)) {
                 if (dochangestate && self.trogg_carryingPlatform !== -1) {
                     // Force dropped platforms' x & y to be on integer boundaries
                     const p = self.trogg_carryingPlatform;
@@ -1015,8 +1015,8 @@ function troggMove(self, xmove, ymove, doyoyo, flags) {
             const r = TroggStanding(self, self.x, self.y, 0, 0, 0, 0);
             self.current_platform_index = r.platformIndex;
 
-            if (self.yoyolength > 0) self.yoyolength -= 1.3;
-            if (self.yoyolength <= 0) {
+            if (gGT(self.yoyolength, 0)) self.yoyolength -= 1.3;
+            if (gLE(self.yoyolength, 0)) {
                 self.eTroggState = (self.eTroggState === TS.YoyoingBack_r) ? TS.Standing_r : TS.Standing_l;
                 self.yoyokey = false;
             } else {
@@ -1200,7 +1200,7 @@ function troggDraw(self) {
         }
     }
 
-    if (self.yoyolength !== 0) {
+    if (gNE(self.yoyolength, 0)) {
         const frame = ((self.yoyolength * self.yoyodir) >> 3) & 3;
         SpriteDraw('sYoyo_Beeb', frame, self.yoyox, self.yoyoy);
         DrawLineScaled(self.yoyox, self.yoyoy - 0.5, self.yoyox - self.yoyolength * self.yoyodir, self.yoyoy - 0.5, 1, c_black);
