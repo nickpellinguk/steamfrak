@@ -158,7 +158,7 @@ const gmlBool = v => v === true || v === 'True' || v === 'true' || (typeof v ===
 
 function gmsEngine(roomName) {
     // GML compares reals with an epsilon: cmp(a, b) is 0 if they're within it
-    const cmp = (a, b) => { const d = a - b; return Math.abs(d) < EPS ? 0 : (d < 0 ? -1 : 1); };
+    const cmp = (a, b) => { const d = a - b; return d === 0 || Math.abs(d) < EPS ? 0 : (d < 0 ? -1 : 1); };
     const lt = (a, b) => cmp(a, b) < 0, le = (a, b) => cmp(a, b) <= 0;
     const gt = (a, b) => cmp(a, b) > 0, ge = (a, b) => cmp(a, b) >= 0;
     const eq = (a, b) => cmp(a, b) === 0, ne = (a, b) => cmp(a, b) !== 0;
