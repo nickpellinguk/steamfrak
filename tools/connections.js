@@ -528,11 +528,22 @@ function findConnections(E) {
 const DIRNAME = ['up-left', 'up', 'up-right', 'left', '-', 'right', 'down-left', 'down', 'down-right'];
 function compare(g, w, gname = 'gms', wname = 'web', detail = DETAIL) {
     const lines = [];
-    // the levels themselves should match
-    const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
-    if (!same([w.P.x, w.P.y, w.P.w], [g.P.x, g.P.y, g.P.w]) || !same([w.L.x, w.L.y, w.L.h], [g.L.x, g.L.y, g.L.h])) {
-        lines.push('  the platforms or ladders differ between the two!');
-    }
+    // Platforms and ladders are matched by where they are (one version might number them
+    // differently, if it leaves something out), and any only one version has are listed
+    const label = (r, kind, i) => i < 0 ? kind + '-1' : kind === 'P' ? `P(${r.P.x[i]},${r.P.y[i]})` : `L(${r.L.x[i]},${r.L.y[i]})`;
+    const relabel = r => {
+        const f = t => t.replace(/\b([PL])(-?\d+)\b/g, (_, kind, i) => label(r, kind, +i));
+        r.outcomes = new Map([...r.outcomes].map(([k, v]) => [f(k), f(v)]));
+        r.edges = new Map([...r.edges].map(([k, v]) => [f(k), v]));
+    };
+    for (const r of [g, w]) if (!r.relabelled) { relabel(r); r.relabelled = true; }
+    const objs = r => new Set([...Array(r.P.n).keys()].map(i => label(r, 'P', i) + ' w' + r.P.w[i])
+        .concat([...Array(r.L.n).keys()].map(i => label(r, 'L', i) + ' h' + r.L.h[i])));
+    const go = objs(g), wo = objs(w);
+    const only = new Set();
+    for (const o of go) if (!wo.has(o)) { lines.push(`  ${o} is only in ${gname} (its starts aren't compared)`); only.add(o.split(' ')[0]); }
+    for (const o of wo) if (!go.has(o)) { lines.push(`  ${o} is only in ${wname} (its starts aren't compared)`); only.add(o.split(' ')[0]); }
+    const skip = k => only.has(k.split(' ')[0]);
     // What a start ends in: how it finishes (which platform Trogg lands on, or how he dies),
     // and the ladders he could grab on the way, without the ticks or exact positions
     const end = v => v.split(' ').slice(0, 2).join(' ').replace(/@\d+/, '').replace(/ -?[\d.]+,-?[\d.]+/, '');
@@ -540,7 +551,8 @@ function compare(g, w, gname = 'gms', wname = 'web', detail = DETAIL) {
     const pad = Math.max(gname.length, wname.length);
     let nOut = 0, nGrab = 0, nEnd = 0;
     for (const [k, v] of g.outcomes) {
-        const wv = w.outcomes.get(k);
+        if (skip(k)) continue;
+        const wv = w.outcomes.get(k) ?? '(not a start)';
         if (wv === v) continue;
         nOut++;
         const kind = end(v) !== end(wv) ? 'end' : grabs(v) !== grabs(wv) ? 'grab' : 'timing';
@@ -558,6 +570,12 @@ function compare(g, w, gname = 'gms', wname = 'web', detail = DETAIL) {
         nEdge++;
         const d = e => e ? `${e.ticks} ticks, from ${e.sx},${e.sy} holding ${DIRNAME[e.sdir]}${e.ddir !== NO_KEY ? ' then ' + DIRNAME[e.ddir] : ''}` : 'none';
         lines.push(`  connection ${k}: ${gname} ${d(a)}; ${wname} ${d(b)}`);
+    }
+    for (const k of w.outcomes.keys()) {
+        if (g.outcomes.has(k) || skip(k)) continue;
+        nOut++; nEnd++;
+        const [obj, xy, dir] = k.split(' ');
+        lines.push(`  from ${obj} at ${xy} holding ${DIRNAME[dir]} (end):\n      ${gname.padEnd(pad)}: (not a start)\n      ${wname.padEnd(pad)}: ${w.outcomes.get(k)}`);
     }
     const summary = `${g.edges.size} connections (${gname}), ${w.edges.size} (${wname}), ${g.outcomes.size} starts; ` +
         (nOut || nEdge ? `${nOut} starts differ (${nEnd} end differently, ${nGrab} grab differently), ${nEdge} connections differ` : 'the same');
